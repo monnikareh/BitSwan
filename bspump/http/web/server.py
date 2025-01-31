@@ -5,6 +5,8 @@ import jwt
 from jwt.exceptions import ExpiredSignatureError, DecodeError
 import base64
 from io import BytesIO
+from jinja2 import Environment, FileSystemLoader
+
 
 from ...abc.source import Source
 from ...abc.sink import Sink
@@ -16,7 +18,7 @@ from importlib.resources import files
 
 
 L = logging.getLogger(__name__)
-
+env = Environment(loader=FileSystemLoader("bspump/http/web/templates"))
 
 def recursive_merge(dict1, dict2):
     for key, value in dict2.items():
@@ -168,17 +170,11 @@ class FieldSet:
             field.field_name = f"{self.prefix}{field.name}"
 
     def html(self, defaults, *args, **kwargs):
-        fields = ""
         self.set_subfield_names()
-        for field in self.fields:
-            fields += field.html(defaults.get(field.name, field.default))
-        return f"""
-        <div style="margin-left: 20px; border-left: 1px solid black; padding-left: 10px;margin-top: 30px;">
-            <legend><b>{self.display}</b></legend>
-            {self.fieldset_intro}
-            {fields}
-        </div>
-        """
+        fields_html = [field.html(defaults.get(field.name, field.default)) for field in self.fields]
+
+        template = env.get_template("fieldset.html")
+        return template.render(display=self.display, fieldset_intro=self.fieldset_intro, fields=fields_html)
 
     def restructure_data(self, dfrom, dto):
         self.set_subfield_names()
@@ -229,24 +225,26 @@ class Field:
     def html(self, default=""):
         if not default:
             default = self.default
-        return f"""
-
-      <div class="mt-10 grid grid-cols-1 gap-x-6 gap-y-8 sm:grid-cols-6" style='{'display: none' if self.hidden else ''}'>
-        <div class="sm:col-span-4">
-                <label for="{self.field_name}" class="block text-sm font-bold text-gray-700">{self.display}</label>
-                {self.inner_html(default, self.readonly)}
-        </div>
-        </div>
-        """
+        template = env.get_template("field.html")
+        return template.render(
+            field_name=self.field_name,
+            display=self.display,
+            default_classes=self.default_classes,
+            hidden=self.hidden,
+            inner_html=self.inner_html(default, self.readonly),
+        )
 
 
 class TextField(Field):
     def inner_html(self, default="", readonly=False):
-        return f"""
-        <div class="mt-1">
-            <input type="text" class="{self.default_classes}" value="{default}" {self.default_input_props}>
-        </div>
-        """
+        template = env.get_template("input_field.html")
+        return template.render(
+            input_type="text",
+            field_name=self.field_name,
+            default=default,
+            readonly=readonly,
+            default_classes=self.default_classes,
+        )
 
 
 class ChoiceField(Field):
@@ -255,16 +253,14 @@ class ChoiceField(Field):
         self.choices = choices
 
     def inner_html(self, default="", readonly=False):
-        return f"""
-        <div class="mt-1">
-            <select class="{self.default_classes}" value="{default}" {self.default_input_props}>
-                {"".join(
-                    f'<option value="{choice}" {"selected" if choice == default else ""}>{choice}</option>'
-                    for choice in self.choices
-                )}
-            </select>
-        </div>
-        """
+        template = env.get_template("choice_field.html")
+        return template.render(
+            field_name=self.field_name,
+            default=default,
+            readonly=readonly,
+            choices=self.choices,
+            default_classes=self.default_classes,
+        )
 
 
 class CheckboxField(Field):
@@ -273,11 +269,13 @@ class CheckboxField(Field):
         self.default = self.default or False
 
     def inner_html(self, default="", readonly=False):
-        readonly_attr = "disabled" if readonly else ""
-        return f"""
-                    <input type="checkbox" {"checked" if default == True or (default and default.lower() in ("true", "t")) else ""} class="{self.default_classes}" {self.default_input_props} {readonly_attr}>
-                """
-
+        template = env.get_template("checkbox_field.html")
+        return template.render(
+            field_name=self.field_name,
+            default=default,
+            readonly=readonly,
+            default_classes=self.default_classes,
+        )
     def clean(self, data, request=None):
         if type(data.get(self.name)) == str:
             data[self.name] = data.get(self.name, False) == "on"
@@ -285,13 +283,14 @@ class CheckboxField(Field):
 
 class IntField(Field):
     def inner_html(self, default=0, readonly=False):
-        if not default:
-            default = 0
-        return f"""
-        <div class="mt-1">
-            <input type="number" value="{default}" class="{self.default_classes}" {self.default_input_props}>
-        </div>
-        """
+        template = env.get_template("input_field.html")
+        return template.render(
+            input_type="number",
+            field_name=self.field_name,
+            default=default,
+            readonly=readonly,
+            default_classes=self.default_classes,
+        )
 
     def clean(self, data, request=None):
         if type(data.get(self.name)) == str:
@@ -299,14 +298,15 @@ class IntField(Field):
 
 
 class FloatField(Field):
-    def inner_html(self, default=0, readonly=False):
-        if not default:
-            default = 0.0
-        return f"""
-        <div class="mt-1">
-            <input type="number" value="{default}" class="{self.default_classes}" {self.default_input_props}>
-        </div>
-        """
+    def inner_html(self, default=0.0, readonly=False):
+        template = env.get_template("input_field.html")
+        return template.render(
+            input_type="number",
+            field_name=self.field_name,
+            default=default,
+            readonly=readonly,
+            default_classes=self.default_classes,
+        )
 
     def clean(self, data, request=None):
         if type(data.get(self.name)) == str:
@@ -319,11 +319,12 @@ class FileField(Field):
     """
 
     def inner_html(self, default="", readonly=False):
-        return f"""
-        <div class="mt-1">
-            <input type="file" class="{self.default_classes}" {self.default_input_props}>
-        </div>
-        """
+        template = env.get_template("file_field.html")
+        return template.render(
+            field_name=self.field_name,
+            readonly=readonly,
+            default_classes=self.default_classes,
+        )
 
     def clean(self, data, request=None):
         if request.content_type == "application/json":
@@ -335,11 +336,13 @@ class FileField(Field):
 
 class RawJSONField(Field):
     def inner_html(self, default="", readonly=False):
-        return f"""
-      <div class="mt-1">
-      <textarea class="{self.default_classes}" {self.default_input_props}>{default}</textarea>
-      </div>
-      """
+        template = env.get_template("rawjson_field.html")
+        return template.render(
+            field_name=self.field_name,
+            default=default,
+            readonly=readonly,
+            default_classes=self.default_classes,
+        )
 
     def clean(self, data, request=None):
         if type(data.get(self.name)) == str:

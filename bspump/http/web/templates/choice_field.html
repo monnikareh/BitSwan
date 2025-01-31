@@ -1,0 +1,7 @@
+<div class="mt-1">
+    <select class="{{ default_classes }}" name="{{ field_name }}" id="{{ field_name }}" {% if readonly %}disabled{% endif %}>
+        {% for choice in choices %}
+            <option value="{{ choice }}" {% if choice == default %}selected{% endif %}>{{ choice }}</option>
+        {% endfor %}
+    </select>
+</div>

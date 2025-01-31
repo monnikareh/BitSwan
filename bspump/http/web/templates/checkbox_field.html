@@ -1,0 +1,5 @@
+<div class="flex items-center">
+    <input type="checkbox" class="{{ default_classes }}" name="{{ field_name }}" id="{{ field_name }}"
+           {% if default in [True, "true", "t"] %}checked{% endif %} {% if readonly %}disabled{% endif %}>
+    <label for="{{ field_name }}" class="ml-2 text-sm text-gray-700">{{ display }}</label>
+</div>
