@@ -1,0 +1,74 @@
+{% import 'checkbox_field.html' as checkbox_field %}
+{% import 'input_field.html' as input_field %}
+
+{% macro render_json(data) %}
+    {% for key, value in data.items() %}
+        {% if value is mapping %}
+            <div class="p-2 border border-gray-100 shadow-md rounded mt-4 mb-2">
+                <h2 class="font-semibold text-lg">{{ key }}</h2>
+                <div class="ml-4">
+                    {{ render_json(value) }}
+                </div>
+            </div>
+        {% elif value is iterable and value is not string %}
+            <div class="p-2 border border-gray-100 shadow-md rounded mt-4 mb-2">
+                <h2 class="font-semibold text-lg">{{ key }}</h2>
+                <div class="ml-4">
+                    {% for item in value %}
+                        {% if item is mapping %}
+                            {{ render_json(item) }}
+                        {% else %}
+                            <p class="text-gray-700">{{ item }}</p>
+                        {% endif %}
+                    {% endfor %}
+                </div>
+            </div>
+        {% else %}
+            <div class="p-2 border border-gray-100 shadow-md rounded mt-4 mb-2">
+                {% if value in [True, "true", "t", False, "false", "f"] %}
+                    {{ checkbox_field.render_checkbox(key, value, default_classes) }}
+                {% elif value is number or value is string and value|int is number %}
+                    {{ input_field.render_input(key, value, default_classes, input_type='number', field_name=key) }}
+                {% else %}
+                    {{ input_field.render_input(key, value, default_classes, input_type='text', field_name=key) }}
+                {% endif %}
+            </div>
+        {% endif %}
+    {% endfor %}
+{% endmacro %}
+
+<!DOCTYPE html>
+<html>
+<head>
+    <link rel="stylesheet" href="/static/tailwind.css">
+    <script>
+        function submitForm() {
+            document.getElementById("loading").style.display = "block";
+            document.getElementById("main-form").submit();
+        }
+    </script>
+</head>
+<body>
+    <div id="loading" style="display:none">
+        <div class="fixed top-0 left-0 h-screen w-screen bg-black bg-opacity-50 z-50 flex justify-center items-center">
+            <div class="bg-white p-4 rounded-lg">
+                <div class="text-center">Processing...</div>
+            </div>
+        </div>
+    </div>
+    <form id="main-form" method="post" onsubmit=submitForm()>
+        <div class="space-y-12">
+            <div class="max-w-7xl mx-auto py-12 px-4 sm:px-6 lg:py-16 lg:px-8 bg-gray shadow sm:rounded-lg">
+                <h1 class="text-3xl font-bold text-gray-800 mb-6 border-b pb-4">Results</h1>
+                {{ render_json(json_data) }}
+            </div>
+        </div>
+
+        <div class="mt-10 grid grid-cols-1 gap-x-6 gap-y-8 sm:grid-cols-6">
+            <div class="sm:col-span-4">
+                <button type="submit" class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded">Submit</button>
+            </div>
+        </div>
+    </form>
+</body>
+</html>
