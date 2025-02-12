@@ -356,7 +356,7 @@ class WebFormSource(WebRouteSource):
         pipeline,
         connection="DefaultWebServerConnection",
         route="/",
-        fields: Field = None,
+        fields: [Field] = None,
         id=None,
         config=None,
         form_intro="",
@@ -482,11 +482,13 @@ class WebFormSource(WebRouteSource):
         <div class="max-w-7xl mx-auto py-12 px-4 sm:px-6 lg:py-16 lg:px-8 bg-gray shadow sm:rounded-lg">
         {self.form_intro}
         """
+
         fields = ""
         for field in self.fields:
             fields += field.html(defaults[field.name])
             if field.name in errors:
                 fields += f'<div class="text-red-500">{errors[field.name]}</div>'
+
         bottom = """
         <div class="mt-10 grid grid-cols-1 gap-x-6 gap-y-8 sm:grid-cols-6">
         <div class="sm:col-span-4">
