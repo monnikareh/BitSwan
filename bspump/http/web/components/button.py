@@ -8,7 +8,7 @@ class Button(BaseField):
         self.name = name
         self.on_click = on_click
         self.button_id = button_id
-        self.required: bool = kwargs.get("required", False)
+        self.required: bool = False
         self.default_classes = kwargs.get(
             "default_css_classes",
             "bg-cyan-600 hover:bg-cyan-900 text-slate-100 font-bold py-2 px-4 rounded-lg mt-10",
