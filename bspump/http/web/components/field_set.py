@@ -16,15 +16,13 @@ class FieldSet(BaseField):
         self.default = {}
         self.fieldset_intro = fieldset_intro
         self.prefix = f"fieldset___{self.name}___"
-        if not required:
-            for field in self.fields:
-                field.required = False
 
     def set_subfield_names(self):
         for field in self.fields:
             field.field_name = f"{self.prefix}{field.name}"
 
     def html(self, defaults={}):
+        self.set_subfield_names()
         self.set_subfield_names()
         fields_html = [
             field.html(defaults.get(field.name, field.default)) for field in self.fields
